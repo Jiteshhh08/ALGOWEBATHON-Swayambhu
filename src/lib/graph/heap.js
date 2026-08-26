@@ -1,12 +1,5 @@
-/**
- * Binary Min-Heap for Dijkstra/A* priority queue
- * Stores items as { key, priority, value }
- * priority = cost (number), key = nodeId
- */
-
 export class MinHeap {
   constructor() {
-    /** @type {Array<{key: string, priority: number, value?: any}>} */
     this.heap = []
   }
 
@@ -22,11 +15,6 @@ export class MinHeap {
     return this.heap[0] || null
   }
 
-  /**
-   * @param {string} key
-   * @param {number} priority
-   * @param {any} [value]
-   */
   push(key, priority, value) {
     const node = { key, priority, value }
     this.heap.push(node)
@@ -44,7 +32,6 @@ export class MinHeap {
     return top
   }
 
-  /** @private */
   _bubbleUp(idx) {
     const node = this.heap[idx]
     while (idx > 0) {
@@ -57,7 +44,6 @@ export class MinHeap {
     }
   }
 
-  /** @private */
   _sinkDown(idx) {
     const len = this.heap.length
     const node = this.heap[idx]

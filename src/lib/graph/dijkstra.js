@@ -1,12 +1,5 @@
 import { MinHeap } from './heap.js'
 
-/**
- * Dijkstra shortest path — respects edge.currentTravelTime and CLOSED edges
- * @param {import('./graph.js').Graph} graph
- * @param {string} startId
- * @param {string} endId
- * @returns {{ distance: number, path: string[], visited: number, feasible: boolean, edges: string[] }}
- */
 export function dijkstra(graph, startId, endId) {
   if (!graph.getNode(startId) || !graph.getNode(endId)) {
     return { distance: Infinity, path: [], visited: 0, feasible: false, edges: [] }
@@ -16,7 +9,7 @@ export function dijkstra(graph, startId, endId) {
   }
 
   const dist = new Map()
-  const prev = new Map() // nodeId -> { nodeId, edgeId }
+  const prev = new Map()
   const visited = new Set()
 
   for (const id of graph.nodes.keys()) dist.set(id, Infinity)
@@ -37,7 +30,7 @@ export function dijkstra(graph, startId, endId) {
     if (d > dist.get(u)) continue
 
     for (const edge of graph.getNeighbors(u)) {
-      if (edge.currentTravelTime === Infinity) continue // CLOSED
+      if (edge.currentTravelTime === Infinity) continue
       const v = edge.destination
       if (visited.has(v)) continue
 
@@ -55,7 +48,6 @@ export function dijkstra(graph, startId, endId) {
     return { distance: Infinity, path: [], visited: visitedCount, feasible: false, edges: [] }
   }
 
-  // reconstruct
   const path = []
   const edges = []
   let cur = endId

@@ -1,16 +1,10 @@
 import { Graph } from '../lib/graph/graph.js'
 
-/**
- * Generate synthetic rural healthcare network
- * @param {{ nodeCount?: number, edgePerNode?: number, seed?: number }} opts
- * @returns {Graph}
- */
 export function generateGraph(opts = {}) {
   const nodeCount = opts.nodeCount || 500
   const edgePerNode = opts.edgePerNode || 4
   let seed = opts.seed || 42
 
-  // simple seeded random
   const rand = () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296
     return seed / 4294967296
@@ -18,10 +12,9 @@ export function generateGraph(opts = {}) {
 
   const graph = new Graph()
 
-  // center around rural India-like coords (e.g., Maharashtra)
   const centerLat = 19.0
   const centerLng = 74.5
-  const spread = 1.5 // degrees ~ 166km
+  const spread = 1.5
 
   const hospitals = Math.max(3, Math.floor(nodeCount * 0.02))
 
@@ -39,7 +32,6 @@ export function generateGraph(opts = {}) {
     })
   }
 
-  // connect each node to nearest neighbors + random long edges
   const ids = [...graph.nodes.keys()]
   const distCache = new Map()
 
@@ -57,7 +49,6 @@ export function generateGraph(opts = {}) {
   let edgeId = 0
   for (const id of ids) {
     const n = graph.getNode(id)
-    // compute distances to others (sample subset for perf on 50k)
     const candidates = []
     const sampleSize = Math.min(nodeCount, 200)
     for (let s = 0; s < sampleSize; s++) {
@@ -77,11 +68,10 @@ export function generateGraph(opts = {}) {
     const connectCount = Math.floor(edgePerNode / 2) + Math.floor(rand() * 2)
     for (let k = 0; k < Math.min(connectCount, candidates.length); k++) {
       const target = candidates[k].id
-      // avoid duplicate edge
       const exists = graph.getNeighbors(id).some((e) => e.destination === target)
       if (exists) continue
       const km = candidates[k].d
-      const baseTime = Math.max(2, (km / 40) * 60) // 40 km/h avg
+      const baseTime = Math.max(2, (km / 40) * 60)
       graph.addEdge({
         id: `e${edgeId++}`,
         source: id,
@@ -98,12 +88,8 @@ export function generateGraph(opts = {}) {
   return graph
 }
 
-/**
- * Small demo graph for unit tests (6 nodes)
- */
 export function generateTinyGraph() {
   const g = new Graph()
-  // line: n0 - n1 - n2 - n3 + shortcut n0-n3
   const coords = [
     [19.0, 74.5],
     [19.02, 74.52],
@@ -125,6 +111,6 @@ export function generateTinyGraph() {
   add(0, 1, 3, 5)
   add(1, 2, 3, 5)
   add(2, 3, 3, 5)
-  add(0, 3, 9, 20) // longer direct
+  add(0, 3, 9, 20)
   return g
 }

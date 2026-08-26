@@ -1,12 +1,5 @@
 import { MinHeap } from './heap.js'
 
-/**
- * Haversine distance in km
- * @param {number} lat1
- * @param {number} lon1
- * @param {number} lat2
- * @param {number} lon2
- */
 export function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371
   const toRad = (d) => (d * Math.PI) / 180
@@ -18,16 +11,8 @@ export function haversineKm(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a))
 }
 
-/**
- * A* shortest path with admissible heuristic: haversine / maxSpeed (km/min)
- * @param {import('./graph.js').Graph} graph
- * @param {string} startId
- * @param {string} endId
- * @param {{ maxSpeedKmh?: number }} [opts]
- * @returns {{ distance: number, path: string[], visited: number, feasible: boolean, edges: string[] }}
- */
 export function aStar(graph, startId, endId, opts = {}) {
-  const maxSpeedKmh = opts.maxSpeedKmh || 60 // optimistic max speed for admissible heuristic
+  const maxSpeedKmh = opts.maxSpeedKmh || 60
   const maxSpeedKmPerMin = maxSpeedKmh / 60
 
   const startNode = graph.getNode(startId)
@@ -43,10 +28,10 @@ export function aStar(graph, startId, endId, opts = {}) {
     const n = graph.getNode(nodeId)
     if (!n) return 0
     const km = haversineKm(n.lat, n.lng, endNode.lat, endNode.lng)
-    return km / maxSpeedKmPerMin // minutes (optimistic)
+    return km / maxSpeedKmPerMin
   }
 
-  const gScore = new Map() // cost from start
+  const gScore = new Map()
   const fScore = new Map()
   const prev = new Map()
   const visited = new Set()

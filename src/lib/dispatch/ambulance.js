@@ -1,13 +1,7 @@
-/**
- * Ambulance state machine — JS
- * States: AVAILABLE, DISPATCHING, EN_ROUTE, AT_PATIENT, TRANSPORTING, COMPLETED, MAINTENANCE, UNAVAILABLE
- */
-
-/** @type {Record<string, string[]>} */
 export const ALLOWED_TRANSITIONS = {
   AVAILABLE: ['DISPATCHING', 'MAINTENANCE', 'UNAVAILABLE'],
   DISPATCHING: ['EN_ROUTE', 'AVAILABLE', 'UNAVAILABLE'],
-  EN_ROUTE: ['AT_PATIENT', 'AVAILABLE', 'UNAVAILABLE'], // can abort
+  EN_ROUTE: ['AT_PATIENT', 'AVAILABLE', 'UNAVAILABLE'],
   AT_PATIENT: ['TRANSPORTING', 'COMPLETED', 'UNAVAILABLE'],
   TRANSPORTING: ['COMPLETED', 'UNAVAILABLE'],
   COMPLETED: ['AVAILABLE', 'MAINTENANCE'],
@@ -15,24 +9,6 @@ export const ALLOWED_TRANSITIONS = {
   UNAVAILABLE: ['AVAILABLE', 'MAINTENANCE'],
 }
 
-/**
- * @typedef {Object} Ambulance
- * @property {string} id
- * @property {string} location - nodeId
- * @property {'AVAILABLE'|'DISPATCHING'|'EN_ROUTE'|'AT_PATIENT'|'TRANSPORTING'|'COMPLETED'|'MAINTENANCE'|'UNAVAILABLE'} status
- * @property {string[]} [equipment]
- * @property {string[]} [capabilities]
- * @property {string|null} [currentRequestId]
- * @property {number|null} [eta] - minutes
- * @property {string[]} [currentRoute]
- * @property {number|null} [availableAt]
- */
-
-/**
- * Transition ambulance state with validation
- * @param {Ambulance} amb
- * @param {Ambulance['status']} next
- */
 export function transition(amb, next) {
   const allowed = ALLOWED_TRANSITIONS[amb.status] || []
   if (!allowed.includes(next)) {
@@ -47,11 +23,6 @@ export function transition(amb, next) {
   return amb
 }
 
-/**
- * Check if ambulance can handle request
- * @param {Ambulance} amb
- * @param {{ requiredEquipment?: string[], requiredCapabilities?: string[] }} req
- */
 export function canHandle(amb, req) {
   if (amb.status !== 'AVAILABLE') return false
   if (req.requiredEquipment) {
@@ -67,11 +38,6 @@ export function canHandle(amb, req) {
   return true
 }
 
-/**
- * Generate mock ambulances for demo
- * @param {string[]} nodeIds
- * @param {number} count
- */
 export function generateAmbulances(nodeIds, count = 8) {
   const ambulances = []
   for (let i = 0; i < count; i++) {
