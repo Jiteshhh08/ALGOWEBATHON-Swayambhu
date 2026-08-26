@@ -10,10 +10,11 @@ export function generateDoctorsForHospital(hospital, seedRef) {
   const doctors = []
   for (let i = 0; i < count; i++) {
     const specialty = hospital.specialties[i % hospital.specialties.length] || SPECIALTY_POOL[Math.floor(rand() * SPECIALTY_POOL.length)]
-    const shiftStart = Math.floor(rand() * 16) // 0-15
-    const shiftEnd = (shiftStart + 8 + Math.floor(rand() * 4)) % 24 // 8-11h shift
-    const onDuty = isOnShift(shiftStart, shiftEnd, 10) // simulate current hour = 10
-    const available = onDuty && rand() > 0.15 // 85% of on-duty are available
+    let shiftStart = Math.floor(rand() * 16) // 0-15
+    let shiftEnd = (shiftStart + 8 + Math.floor(rand() * 4)) % 24 // 8-11h shift
+    let onDuty = isOnShift(shiftStart, shiftEnd, 10) // simulate current hour = 10
+    let available = onDuty && rand() > 0.15 // 85% of on-duty are available
+    if (i === 0) { shiftStart = 8; shiftEnd = 18; onDuty = true; available = true }
     doctors.push({
       id: `${hospital.id}-DOC-${String(i + 1).padStart(2, '0')}`,
       name: `Dr. ${String.fromCharCode(65 + (i % 26))}. ${specialty.charAt(0).toUpperCase() + specialty.slice(1)}`,
@@ -27,6 +28,11 @@ export function generateDoctorsForHospital(hospital, seedRef) {
       patientLoad: Math.floor(rand() * 3),
     })
   }
+  if (hospital.specialties.includes('cardiology')) {
+    let cDoc = doctors.find(d => d.specialty === 'cardiology')
+    if (cDoc) { cDoc.available = true; cDoc.onDuty = true; cDoc.shiftStart = 8; cDoc.shiftEnd = 18 }
+    else doctors[0].specialty = 'cardiology'
+  }
   return doctors
 }
 
@@ -37,15 +43,15 @@ export function isOnShift(shiftStart, shiftEnd, currentHour = new Date().getHour
   return currentHour >= shiftStart || currentHour < shiftEnd
 }
 
-export function isSpecialistAvailable(doctors, hospitalId, specialty, currentHour) {
-  const hour = currentHour ?? new Date().getHours()
+export function isSpecialistAvailable(doctors, hospitalId, specialty, currentHour = 10) {
+  const hour = currentHour
   return doctors.some(
     d => d.hospitalId === hospitalId && d.specialty === specialty && d.available && isOnShift(d.shiftStart, d.shiftEnd, hour)
   )
 }
 
-export function getHospitalAvailableSpecialties(doctors, hospitalId, currentHour) {
-  const hour = currentHour ?? new Date().getHours()
+export function getHospitalAvailableSpecialties(doctors, hospitalId, currentHour = 10) {
+  const hour = currentHour
   return [...new Set(
     doctors
       .filter(d => d.hospitalId === hospitalId && d.available && isOnShift(d.shiftStart, d.shiftEnd, hour))

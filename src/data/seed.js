@@ -85,6 +85,33 @@ export function generateGraph(opts = {}) {
     }
   }
 
+  const hospitalIds = [...graph.nodes.values()].filter(n => n.type === 'hospital').map(n => n.id)
+  for (const id of ids) {
+    const n = graph.getNode(id)
+    if (n.type !== 'village') continue
+    let bestH = null
+    let bestD = Infinity
+    for (const hid of hospitalIds) {
+      const h = graph.getNode(hid)
+      const d = haversine(n, h)
+      if (d < bestD) { bestD = d; bestH = hid }
+    }
+    const already = graph.getNeighbors(id).some(e => e.destination === bestH)
+    if (!already && bestH) {
+      const baseTime = Math.max(2, (bestD / 40) * 60)
+      graph.addEdge({
+        id: `e${edgeId++}`,
+        source: id,
+        destination: bestH,
+        distance: bestD,
+        baseTravelTime: baseTime,
+        currentTravelTime: baseTime,
+        status: 'OPEN',
+        trafficMultiplier: 1,
+      })
+    }
+  }
+
   return graph
 }
 

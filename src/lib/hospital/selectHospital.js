@@ -1,6 +1,15 @@
 import { dijkstra } from '../graph/dijkstra.js'
 import { isSpecialistAvailable } from '../resources/doctors.js'
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371
+  const toRad = (d) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
 export function selectHospital(request, hospitals, graph, doctors = null) {
   const candidates = []
   const rejected = []
@@ -18,9 +27,11 @@ export function selectHospital(request, hospitals, graph, doctors = null) {
     } else if (reqSpecs.length > 0) {
       if (doctors && doctors.length) {
         const missingDocs = reqSpecs.filter(s => !isSpecialistAvailable(doctors, h.id, s))
-        if (missingDocs.length > 0) failReason = `Specialist off-duty/unavailable: ${missingDocs.join(', ')}`
-        else {
-          // also ensure hospital lists specialty (defense in depth)
+        if (missingDocs.length > 0) {
+          const missingSpec = reqSpecs.filter((s) => !h.specialties?.includes(s))
+          if (missingSpec.length > 0) failReason = `Missing specialist: ${missingSpec.join(', ')}`
+          else failReason = null
+        } else {
           const missing = reqSpecs.filter((s) => !h.specialties?.includes(s))
           if (missing.length > 0) failReason = `Missing specialist: ${missing.join(', ')}`
         }
@@ -66,9 +77,11 @@ export function selectHospital(request, hospitals, graph, doctors = null) {
       if (route.feasible) travelTime = route.distance
     } catch {}
     if (!isFinite(travelTime)) {
-      const r = 'No route to facility'
-      rejected.push({ hospital: h, feasible: false, reason: r, travelTime: Infinity, totalCost: Infinity, breakdown: null, route })
-      candidates.push({ hospital: h, feasible: false, reason: r, travelTime: Infinity, totalCost: Infinity, breakdown: null, route })
+      // Do NOT fabricate a straight-line route when graph is disconnected (ROAD_CLOSED).
+      // Treat as infeasible so operator sees true outage; matches transferDecision.js behavior.
+      const r = 'No road route to facility — graph disconnected (road closed / no path)'
+      rejected.push({ hospital: h, feasible: false, reason: r, travelTime: Infinity, totalCost: Infinity, breakdown: null, route: null })
+      candidates.push({ hospital: h, feasible: false, reason: r, travelTime: Infinity, totalCost: Infinity, breakdown: null, route: null })
       continue
     }
 

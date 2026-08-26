@@ -42,15 +42,31 @@ export class Graph {
     if (!edge) return null
     if (patch.status) edge.status = patch.status
     if (patch.trafficMultiplier !== undefined) edge.trafficMultiplier = patch.trafficMultiplier
+    else if (patch.status === 'OPEN') edge.trafficMultiplier = 1
     this._updateEdgeTime(edge)
 
+    // Reverse edge is only in destination's adjacency list — O(degree) not O(E)
     const revId = edgeId + '_rev'
-    for (const list of this.adj.values()) {
-      for (const e of list) {
+    const destList = this.adj.get(edge.destination)
+    if (destList) {
+      for (const e of destList) {
         if (e.id === revId) {
           e.status = edge.status
           e.trafficMultiplier = edge.trafficMultiplier
           e.currentTravelTime = edge.currentTravelTime
+          break
+        }
+      }
+    }
+    // Also keep source list's forward reference in sync if patch touched multiplier only
+    const srcList = this.adj.get(edge.source)
+    if (srcList) {
+      for (const e of srcList) {
+        if (e.id === edgeId) {
+          e.status = edge.status
+          e.trafficMultiplier = edge.trafficMultiplier
+          e.currentTravelTime = edge.currentTravelTime
+          break
         }
       }
     }

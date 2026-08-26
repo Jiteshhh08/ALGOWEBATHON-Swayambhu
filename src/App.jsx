@@ -93,8 +93,14 @@ export default function App() {
   }
 
   const handleDemoScenario = () => {
-    const origins = villageNodes[2]?.id || 'n5'
-    const demoHospitals = createDemoHospitals(hospitals.slice(0, 3).map(h => h.nodeId))
+    const origins = villageNodes[2]?.id || villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || 'n5'
+    const baseIds = hospitals.slice(0, 3).map(h => h.nodeId)
+    // Ensure 3 ids even if hospitals <3 — fallback to real node ids
+    while (baseIds.length < 3) {
+      const fallback = [...graph.nodes.values()].find(n => !baseIds.includes(n.id))?.id || `n${baseIds.length}`
+      baseIds.push(fallback)
+    }
+    const demoHospitals = createDemoHospitals(baseIds, graph)
     setHospitals([...demoHospitals, ...hospitals.slice(3)])
     const seedRef = { seed: 888 }
     setDoctors(demoHospitals.flatMap(h => generateDoctorsForHospital(h, seedRef)))
@@ -113,7 +119,8 @@ export default function App() {
     const edge = graph.getEdge(roadStatus.id)
     if (!edge) { setLogs(l => [{ ts: new Date().toLocaleTimeString(), type: 'ROAD', msg: `Edge ${roadStatus.id} not found`, tone: 'red' }, ...l]); return }
     const old = edge.status
-    graph.updateEdge(roadStatus.id, { status: roadStatus.status, trafficMultiplier: roadStatus.status === 'SLOW' ? 2.5 : 1 })
+    const mult = roadStatus.status === 'SLOW' ? 2.5 : roadStatus.status === 'OPEN' ? 1 : undefined
+    graph.updateEdge(roadStatus.id, { status: roadStatus.status, trafficMultiplier: mult })
     invalidate()
     const rec = { id: `DEC-${Date.now()}`, timestamp: Date.now(), requestId: roadStatus.id, decisionType: 'ROUTE_RECALCULATED', reason: `Edge ${roadStatus.id}: ${old} → ${roadStatus.status}`, algorithm: 'A*' }
     eventLog.push('ROUTE_RECALCULATED', roadStatus.id, rec)
@@ -123,7 +130,8 @@ export default function App() {
   }
   const handleAddRandom = () => {
     const urg = ['Critical','High','Medium','Low'][Math.floor(Math.random()*4)]
-    const origin = [...graph.nodes.values()].filter(n=>n.type==='village')[Math.floor(Math.random()*40)]?.id || villageNodes[0].id
+    const villages = [...graph.nodes.values()].filter(n=>n.type==='village')
+    const origin = villages[Math.floor(Math.random()*Math.min(40, villages.length))]?.id || villageNodes[0]?.id || villages[0]?.id || [...graph.nodes.keys()][0]
     const req = { id: `R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency: urg, requiredSpecialties: urg==='Critical'?['cardiology']:['general'], requiredEquipment: urg==='Critical'?['ventilator']:['oxygen'], requiredMedicines: ['epinephrine'], requiresICU: urg==='Critical', createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req)
     setRequests([...requests, req]); setSelectedId(req.id)
@@ -138,7 +146,7 @@ export default function App() {
   }
 
   const handleScenarioA = () => {
-    const origin = villageNodes[Math.floor(Math.random()*5)]?.id || villageNodes[0].id
+    const origin = villageNodes[Math.floor(Math.random()*Math.min(5, villageNodes.length))]?.id || villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || [...graph.nodes.keys()][0]
     const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
@@ -148,9 +156,11 @@ export default function App() {
     setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_A', msg:`A: Normal cardiac @ ${graph.getNode(origin)?.name} → ${hospRes.selected?.name || 'no hospital'}`, tone:'blue'}, ...l])
   }
   const handleScenarioB = () => {
-    if (!selection?.bestDetail?.route?.edges?.length) { setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_B', msg:'B: No active route — create emergency first', tone:'yellow'}, ...l]); return }
-    const eid = selection.bestDetail.route.edges[Math.floor(selection.bestDetail.route.edges.length/2)]
-    const e = graph.getEdge(eid); if (!e) return
+    const edges = selection?.bestDetail?.route?.edges
+    if (!edges?.length) { setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_B', msg:'B: No active route — create emergency first (need hospital route with edges)', tone:'yellow'}, ...l]); return }
+    const eid = edges[Math.floor(edges.length/2)]
+    if (!eid) { setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_B', msg:'B: Route has no edges — cannot close road', tone:'yellow'}, ...l]); return }
+    const e = graph.getEdge(eid); if (!e) { setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_B', msg:`B: Edge ${eid} not found`, tone:'red'}, ...l]); return }
     graph.updateEdge(eid, { status:'CLOSED' }); invalidate()
     const rec = { id:`DEC-${Date.now()}`, timestamp: Date.now(), requestId: eid, decisionType:'ROUTE_RECALCULATED', reason:`B: Road ${eid} closed on active route`, algorithm:'A*' }
     eventLog.push('ROAD_CLOSED', eid, rec); setDecisions(d=>[rec, ...d].slice(0,30))
@@ -168,7 +178,8 @@ export default function App() {
   }
   const handleScenarioF = () => {
     ambulances.forEach((a,i)=>{ if(i<6) a.status='EN_ROUTE' }); setHospitals(h=>[...h])
-    const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: villageNodes[0].id, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
+    const fallbackOrigin = villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || [...graph.nodes.keys()][0]
+    const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: fallbackOrigin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion:true })
     setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_F', msg:`F: Fleet shortage — ${ambRes.reason}`, tone: ambRes.selected?'green':'red'}, ...l])
@@ -208,8 +219,9 @@ export default function App() {
               <MetricsPanel metrics={metrics} cache={cacheStats()} />
               <BenchmarkPanel benchmark={benchmark} />
             </div>
-            <Scenarios onA={handleScenarioA} onB={handleScenarioB} onC={handleDemoScenario} onD={handleScenarioD} onE={handleScenarioE} onF={handleScenarioF} />
+            {activeNav === 'mission' && <Scenarios onA={handleScenarioA} onB={handleScenarioB} onC={handleDemoScenario} onD={handleScenarioD} onE={handleScenarioE} onF={handleScenarioF} />}
           </div>
+          {activeNav === 'mission' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-3 space-y-4">
             <EmergencyForm form={form} setForm={setForm} villageNodes={villageNodes} onCreate={handleCreate} onDemo={handleDemoScenario} demoMode={demoMode} crossRegion={crossRegion} setCrossRegion={setCrossRegion} />
@@ -227,6 +239,44 @@ export default function App() {
             <EventLog logs={logs} />
           </div>
         </div>
+          )}
+          {activeNav === 'dispatch' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <EmergencyForm form={form} setForm={setForm} villageNodes={villageNodes} onCreate={handleCreate} onDemo={handleDemoScenario} demoMode={demoMode} crossRegion={crossRegion} setCrossRegion={setCrossRegion} />
+              <div className="space-y-4"><PriorityQueue queueSorted={queueSorted} selectedReq={selectedReq} setSelectedId={setSelectedId} graph={graph} /><AmbulancePanel selectedReq={selectedReq} ambSelection={ambSelection} /></div>
+            </div>
+          )}
+          {activeNav === 'facilities' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <NetworkMap graph={graph} selection={selection} selectedReq={selectedReq} hospitals={hospitals} />
+              <HospitalList hospitals={hospitals} selection={selection} onToggle={handleToggleHospital} />
+            </div>
+          )}
+          {activeNav === 'resources' && (
+            <div className="grid grid-cols-1 gap-4">
+              <HospitalList hospitals={hospitals} selection={selection} onToggle={handleToggleHospital} />
+              {transferDecision && <HospitalDecision selectedReq={selectedReq} selection={selection} transferDecision={transferDecision} />}
+            </div>
+          )}
+          {activeNav === 'analytics' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <MetricsPanel metrics={metrics} cache={cacheStats()} />
+              <BenchmarkPanel benchmark={benchmark} />
+              <div className="lg:col-span-2"><RoadControl graph={graph} roadStatus={roadStatus} setRoadStatus={setRoadStatus} onApply={handleRoadUpdate} routeStats={routeStats} /></div>
+            </div>
+          )}
+          {activeNav === 'decisions' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <HospitalDecision selectedReq={selectedReq} selection={selection} transferDecision={transferDecision} />
+              <div className="space-y-4"><DecisionLog decisions={decisions} /><EventLog logs={logs} /></div>
+            </div>
+          )}
+          {activeNav === 'simulation' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Scenarios onA={handleScenarioA} onB={handleScenarioB} onC={handleDemoScenario} onD={handleScenarioD} onE={handleScenarioE} onF={handleScenarioF} />
+              <RoadControl graph={graph} roadStatus={roadStatus} setRoadStatus={setRoadStatus} onApply={handleRoadUpdate} routeStats={routeStats} />
+            </div>
+          )}
         </div>
       </div>
       <footer className="border-t border-[#DCE7EC] py-3 text-center text-[11px] text-[#81949D] bg-white">Healthcare Command Center · deterministic routing · explainable decisions</footer>

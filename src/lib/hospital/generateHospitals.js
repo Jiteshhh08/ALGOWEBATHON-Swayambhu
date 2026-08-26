@@ -69,18 +69,49 @@ export function generateHospitals(graph, opts = {}) {
     }
   })
 
+  if (hospitals.length > 0) {
+    const h0 = hospitals[0]
+    if (!h0.specialties.includes('cardiology')) h0.specialties.push('cardiology')
+    if (!h0.specialties.includes('general')) h0.specialties.push('general')
+    if (!h0.equipment.includes('ventilator')) h0.equipment.push('ventilator')
+    if (!h0.equipment.includes('icu')) h0.equipment.push('icu')
+    h0.operatingStatus = 'OPEN'
+    h0.bedsAvailable = Math.max(h0.bedsAvailable, 10)
+    h0.icuAvailable = Math.max(h0.icuAvailable, 2)
+    for (const med of ['epinephrine', 'insulin']) {
+      if ((h0.medicineStock[med] ?? 0) < 20) h0.medicineStock[med] = 30
+    }
+  }
+  if (hospitals.length > 1 && !hospitals[1].specialties.includes('cardiology') && rand() < 0.7) {
+    hospitals[1].specialties.push('cardiology')
+    if (!hospitals[1].equipment.includes('ventilator')) hospitals[1].equipment.push('ventilator')
+    hospitals[1].operatingStatus = 'OPEN'
+  }
+
   return hospitals
 }
 
-export function createDemoHospitals(nodeIds) {
+export function createDemoHospitals(nodeIds, graph = null) {
   const [nA, nB, nC] = nodeIds
+  const coord = (id, fallbackLat, fallbackLng) => {
+    if (graph) {
+      const n = graph.getNode(id)
+      if (n) return [n.lat, n.lng]
+    }
+    return [fallbackLat, fallbackLng]
+  }
+  const [latA, lngA] = coord(nA, 19.0, 74.5)
+  const [latB, lngB] = coord(nB, 19.02, 74.52)
+  const [latC, lngC] = coord(nC, 19.06, 74.56)
+  // Guard: if any id missing, demo would place hospital at undefined location and be invisible
+  const safeIds = [nA, nB, nC].map((id, i) => id || `n-demo-${i}`)
   return [
     {
       id: 'H01',
       name: 'District Hospital A (NEAREST)',
-      nodeId: nA,
-      lat: 19.0,
-      lng: 74.5,
+      nodeId: safeIds[0],
+      lat: latA,
+      lng: lngA,
       bedsTotal: 50,
       bedsAvailable: 20,
       bedsOccupied: 30,
@@ -99,9 +130,9 @@ export function createDemoHospitals(nodeIds) {
     {
       id: 'H02',
       name: 'District Hospital B (MID)',
-      nodeId: nB,
-      lat: 19.02,
-      lng: 74.52,
+      nodeId: safeIds[1],
+      lat: latB,
+      lng: lngB,
       bedsTotal: 50,
       bedsAvailable: 15,
       bedsOccupied: 35,
@@ -120,9 +151,9 @@ export function createDemoHospitals(nodeIds) {
     {
       id: 'H03',
       name: 'District Hospital C (FAR but feasible)',
-      nodeId: nC,
-      lat: 19.06,
-      lng: 74.56,
+      nodeId: safeIds[2],
+      lat: latC,
+      lng: lngC,
       bedsTotal: 60,
       bedsAvailable: 30,
       bedsOccupied: 30,

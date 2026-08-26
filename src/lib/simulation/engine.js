@@ -34,7 +34,9 @@ export function createSimulationEngine(graph) {
 
   function handleRoadEvent(edgeId, newStatus, trafficMultiplier) {
     if (newStatus !== undefined) {
-      graph.updateEdge(edgeId, { status: newStatus, trafficMultiplier: trafficMultiplier || undefined })
+      // SLOW=2.5 consistently, OPEN=1, CLOSED keeps multiplier but time=Infinity
+      const mult = newStatus === 'SLOW' ? (trafficMultiplier ?? 2.5) : newStatus === 'OPEN' ? 1 : undefined
+      graph.updateEdge(edgeId, { status: newStatus, trafficMultiplier: mult })
     }
 
     const reroutes = []

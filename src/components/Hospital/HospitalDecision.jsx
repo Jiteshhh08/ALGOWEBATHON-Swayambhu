@@ -25,7 +25,10 @@ export function HospitalDecision({ selectedReq, selection, transferDecision }) {
                 <div className="mt-2 text-[11px] text-[#58707B]">Route: {selection.bestDetail?.route?.path?.join(' → ') || '—'} · ETA {selection.bestDetail?.travelTime?.toFixed(1)}m</div>
               </div>
             ) : (
-              <div className="p-3 rounded bg-[#FDECEE] border border-[#F5C2C7] text-xs text-[#7A1A1A]">{selection.reason}</div>
+              <div className="p-3 rounded bg-[#FDECEE] border border-[#F5C2C7] text-xs text-[#7A1A1A]">
+                <div>{selection.reason}</div>
+                <div className="mt-2 text-[#8A6A00] bg-[#FFF5E5] border border-[#FFE5B2] rounded px-2 py-1">Tip: Try “Reset” to refresh hospitals, use “★ Demo: Reject Nearest”, or change specialty to “general”.</div>
+              </div>
             )}
             <div>
               <h3 className="text-xs font-semibold mb-1 text-[#123B5D]">All Candidates (sorted by total cost)</h3>
