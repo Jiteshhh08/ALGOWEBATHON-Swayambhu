@@ -7,6 +7,8 @@ import { generateHospitals, createDemoHospitals } from './lib/hospital/generateH
 import { selectHospital } from './lib/hospital/selectHospital.js'
 import { decideAmbulance, decideHospital, decideRoute } from './lib/decision/decisionEngine.js'
 import { createEventLog } from './lib/decision/eventLog.js'
+import { generateDoctorsForHospital } from './lib/resources/doctors.js'
+import { compareTransferVsDelivery } from './lib/resources/transferDecision.js'
 import { Header } from './components/Header/Header.jsx'
 import { NavRail } from './components/Header/NavRail.jsx'
 import { EmergencyForm } from './components/Queue/EmergencyForm.jsx'
@@ -21,6 +23,11 @@ import { DecisionLog, EventLog } from './components/Decision/DecisionLog.jsx'
 export default function App() {
   const [graph] = useState(() => generateGraph({ nodeCount: 200, edgePerNode: 4, seed: 42 }))
   const [hospitals, setHospitals] = useState(() => generateHospitals(graph, { seed: 99 }))
+  const [doctors, setDoctors] = useState(() => {
+    const h = generateHospitals(graph, { seed: 99 })
+    const seedRef = { seed: 777 }
+    return h.flatMap(hosp => generateDoctorsForHospital(hosp, seedRef))
+  })
   const [ambulances] = useState(() => generateAmbulances([...graph.nodes.keys()], 8))
   const [queue] = useState(() => new EmergencyQueue())
   const [requests, setRequests] = useState([])
@@ -43,8 +50,9 @@ export default function App() {
   useEffect(() => { if (!form.originNode && villageNodes.length) setForm(f => ({ ...f, originNode: villageNodes[0].id })) }, [villageNodes, form.originNode])
 
   const selectedReq = requests.find(r => r.id === selectedId) || requests[0] || null
-  const selection = useMemo(() => selectedReq ? selectHospital(selectedReq, hospitals, graph) : null, [selectedReq, hospitals, graph])
+  const selection = useMemo(() => selectedReq ? selectHospital(selectedReq, hospitals, graph, doctors) : null, [selectedReq, hospitals, graph, doctors])
   const ambSelection = useMemo(() => selectedReq ? selectAmbulance(selectedReq, ambulances, graph, { crossRegion }) : null, [selectedReq, ambulances, graph, crossRegion])
+  const transferDecision = useMemo(() => selectedReq ? compareTransferVsDelivery(selectedReq, hospitals, graph, doctors) : null, [selectedReq, hospitals, graph, doctors])
   const queueSorted = useMemo(() => queue.toSorted(), [requests, queue])
   const routeStats = useMemo(() => {
     if (!selectedReq || !selection?.selected) return null
@@ -61,7 +69,7 @@ export default function App() {
     setRequests([...requests, req])
     setSelectedId(id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
-    const hospRes = decideHospital(req, hospitals, graph, { selectHospital })
+    const hospRes = decideHospital(req, hospitals, graph, { selectHospital, doctors })
     eventLog.push('EMERGENCY_CREATED', req.id, { urgency: req.urgency })
     eventLog.push('AMBULANCE_ASSIGNED', req.id, ambRes.record)
     eventLog.push('HOSPITAL_SELECTED', req.id, hospRes.record)
@@ -80,6 +88,8 @@ export default function App() {
     const origins = villageNodes[2]?.id || 'n5'
     const demoHospitals = createDemoHospitals(hospitals.slice(0, 3).map(h => h.nodeId))
     setHospitals([...demoHospitals, ...hospitals.slice(3)])
+    const seedRef = { seed: 888 }
+    setDoctors(demoHospitals.flatMap(h => generateDoctorsForHospital(h, seedRef)))
     setDemoMode(true)
     const req = { id: `R${String(requests.length + 1).padStart(3, '0')}`, originNode: origins, urgency: 'Critical', requiredSpecialties: ['cardiology'], requiredEquipment: ['ventilator'], requiredMedicines: ['epinephrine'], requiresICU: true, createdAt: Date.now(), status: 'QUEUED' }
     queue.insert(req)
@@ -103,7 +113,10 @@ export default function App() {
     setHospitals(h => [...h])
   }
   const handleReset = () => {
-    setHospitals(generateHospitals(graph, { seed: Math.floor(Math.random() * 1000) }))
+    const newH = generateHospitals(graph, { seed: Math.floor(Math.random() * 1000) })
+    setHospitals(newH)
+    const seedRef = { seed: Math.floor(Math.random() * 1000) }
+    setDoctors(newH.flatMap(h => generateDoctorsForHospital(h, seedRef)))
     setRequests([]); setSelectedId(null); setLogs([]); setDecisions([]); eventLog.clear(); setDemoMode(false)
     for (const r of [...queue.toSorted()]) queue.remove(r.id)
   }
@@ -125,7 +138,7 @@ export default function App() {
             <HospitalList hospitals={hospitals} selection={selection} onToggle={handleToggleHospital} />
           </div>
           <div className="lg:col-span-4 space-y-4">
-            <HospitalDecision selectedReq={selectedReq} selection={selection} />
+            <HospitalDecision selectedReq={selectedReq} selection={selection} transferDecision={transferDecision} />
             <DecisionLog decisions={decisions} />
             <EventLog logs={logs} />
           </div>

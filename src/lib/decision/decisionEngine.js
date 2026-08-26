@@ -22,8 +22,8 @@ export function decideAmbulance(request, ambulances, graph, opts = {}) {
 }
 
 export function decideHospital(request, hospitals, graph, opts = {}) {
-  const { selectHospital } = opts
-  const res = selectHospital(request, hospitals, graph)
+  const { selectHospital, doctors } = opts
+  const res = selectHospital(request, hospitals, graph, doctors)
   const alternatives = res.candidates.filter(c => c.hospital.id !== res.selected?.id).slice(0, 5).map(c => ({
     id: c.hospital.id,
     name: c.hospital.name,

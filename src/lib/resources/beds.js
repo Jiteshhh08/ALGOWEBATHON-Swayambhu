@@ -1,8 +1,3 @@
-/**
- * Bed & ICU occupancy tracking — Phase 5.2
- * PRD 7.9
- */
-
 export function canAdmit(hospital, requiresICU = false) {
   if (hospital.operatingStatus && hospital.operatingStatus !== 'OPEN') return { ok: false, reason: 'Facility closed' }
   if (requiresICU) {

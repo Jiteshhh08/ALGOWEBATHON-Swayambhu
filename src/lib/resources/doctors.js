@@ -1,8 +1,3 @@
-/**
- * Doctor / Specialist resource management — Phase 5.1
- * PRD 7.8
- */
-
 const SPECIALTY_POOL = ['cardiology', 'neurology', 'trauma', 'general', 'pediatrics', 'orthopedics']
 
 export function generateDoctorsForHospital(hospital, seedRef) {

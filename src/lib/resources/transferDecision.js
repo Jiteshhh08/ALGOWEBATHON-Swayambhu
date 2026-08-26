@@ -1,17 +1,5 @@
-/**
- * Patient Transfer vs Medicine Delivery comparison — Phase 5.5
- * Uses existing graph routing (dijkstra). PRD 7.11 / 12.4
- */
 import { dijkstra } from '../graph/dijkstra.js'
 import { isSpecialistAvailable } from './doctors.js'
-
-/**
- * @param {object} request - { originNode, requiredSpecialties, requiredMedicines, requiresICU, etc }
- * @param {Array} hospitals
- * @param {import('../graph/graph.js').Graph} graph
- * @param {Array} doctors
- * @returns {object} { transfer, delivery, recommendation, reason }
- */
 export function compareTransferVsDelivery(request, hospitals, graph, doctors = []) {
   const requiredMeds = request.requiredMedicines || []
   const requiredSpecs = request.requiredSpecialties || []

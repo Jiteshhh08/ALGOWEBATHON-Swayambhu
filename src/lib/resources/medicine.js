@@ -1,8 +1,3 @@
-/**
- * Medicine stock management — Phase 5.3 & 5.4
- * PRD 7.10 / 7.12
- */
-
 export function getMedicineStatus(quantity, thresholds) {
   const q = Number(quantity)
   if (!isFinite(q) || q <= 0) return 'OUT_OF_STOCK'

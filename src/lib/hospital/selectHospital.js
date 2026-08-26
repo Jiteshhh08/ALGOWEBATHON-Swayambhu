@@ -1,16 +1,6 @@
 import { dijkstra } from '../graph/dijkstra.js'
 import { isSpecialistAvailable } from '../resources/doctors.js'
 
-/**
- * Hard-constraint filter + total-cost scoring for hospitals.
- * Implements PRD 7.5 / 12.2 and PHASES Phase 3 + Phase 5 doctor integration.
- *
- * @param {object} request - { id, originNode, urgency, requiredSpecialties[], requiredEquipment[], requiredMedicines[], requiresICU }
- * @param {Array} hospitals - array of hospital objects
- * @param {import('../graph/graph.js').Graph} graph
- * @param {Array} doctors - optional doctors array for Phase 5 shift-aware check
- * @returns {{selected: object|null, candidates: Array, rejected: Array, reason: string}}
- */
 export function selectHospital(request, hospitals, graph, doctors = null) {
   const candidates = []
   const rejected = []
