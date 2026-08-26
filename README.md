@@ -11,7 +11,8 @@ Live rural healthcare command system — finds the best **feasible** ambulance +
 - [Project Structure](#project-structure)
 - [Algorithm / Approach](#algorithm--approach)
 - [Testing / Test Cases](#testing--test-cases)
-- [Third-Party APIs and AI Tools](#third-party-apis-and-ai-tools)
+- [Third-Party APIs](#third-party-apis)
+- [AI Tools Used](#ai-tools-used)
 - [Key Product Notes](#key-product-notes)
 
 ## Project Overview
@@ -148,7 +149,7 @@ npm i -D vitest
 # tests/lib/graph/dijkstra.test.js — assert closed edge = Infinity, A* <= Dijkstra visited
 ```
 
-## Third-Party APIs and AI Tools
+## Third-Party APIs
 
 | Name | One-line purpose |
 |---|---|
@@ -157,7 +158,6 @@ npm i -D vitest
 | **Vite 8 + @vitejs/plugin-react** (`package.json:21`) | Dev HMR + production build |
 | **React 19 + React-DOM 19** (`package.json:14`) | UI rendering |
 | **Oxlint 1.79** (`package.json:21`) | Linting |
-| **Muse Spark (muse-spark-1.2)** | AI assistant used via OpenCode for scaffolding, bug fixes, map/benchmark refinements |
 | *Proposed / not yet bundled* || 
 | **Leaflet / React-Leaflet → MapLibre + deck.gl** (`README prior`) | Planned WebGL map for 50k-node scale |
 | **Zod** | Planned runtime validation for `EmergencyRequest/Hospital/RoadEdge` |
@@ -167,6 +167,16 @@ npm i -D vitest
 | **fastpriorityqueue / rbush** | Planned binary heap / spatial index alternatives |
 
 > No external paid APIs (Google Maps, clinical AI) are used — routing is fully deterministic (`PRD 6`).
+
+## AI Tools Used
+
+| Tool | One-line purpose |
+|---|---|
+| **Muse Spark 1.2** | Primary AI coding assistant — scaffolding, clinical UI (DESIGN.md), map zoom/ambulance animation, benchmark fixes, bug fixes |
+| **Muse (Anthropic)** | Explored codebase for similar hardcoded-coordinate bugs and cached-route inconsistencies |
+| **Google Fonts API (Inter)** | AI-suggested typography choice for clinical readability (via Muse Spark) — not a generative AI but used as external API |
+
+> All core routing (`Dijkstra`, `A*`, `heap`, `selectHospital` hard-filter + `totalCost`) is deterministic hand-written code (`src/lib/graph/*.js`) — AI was used for UI/boilerplate and bug fixing, never for routing correctness (per `PRD 6: Depending on an external AI model for core routing correctness — Non-goal`).
 
 ## Key Product Notes
 - **Feasibility before optimization** — nearest infeasible is rejected before cost compare.
