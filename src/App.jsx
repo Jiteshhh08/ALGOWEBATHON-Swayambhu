@@ -67,8 +67,8 @@ export default function App() {
     const rA = decideRoute(graph, selectedReq.originNode, target, 'astar')
     return { dijkstra: { ...rD, ms: rD.record.ms }, astar: { ...rA, ms: rA.record.ms } }
   }, [selectedReq, selection, graph])
-  const metrics = useMemo(() => computeMetrics({ requests, hospitals, ambulances, routeStats }), [requests, hospitals, ambulances, routeStats])
-  const benchmark = useMemo(() => requests.length ? runBenchmark(requests, hospitals, graph) : null, [requests, hospitals, graph])
+  const metrics = useMemo(() => computeMetrics({ requests, hospitals, ambulances, routeStats, now: Date.now() }), [requests, hospitals, ambulances, routeStats])
+  const benchmark = useMemo(() => requests.length ? runBenchmark(requests, hospitals, graph, doctors) : null, [requests, hospitals, graph, doctors])
 
   const handleCreate = () => {
     const id = `R${String(requests.length + 1).padStart(3, '0')}`
