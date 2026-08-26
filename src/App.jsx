@@ -249,9 +249,19 @@ export default function App() {
     for (const r of [...queue.toSorted()]) queue.remove(r.id)
   }
 
+  const handleBell = () => { setActiveNav('decisions'); document.getElementById('event-log-anchor')?.scrollIntoView({ behavior:'smooth' }) }
+
   return (
     <div className="min-h-screen bg-[#F4F8FA] text-[#16313F] flex flex-col">
-      <Header graph={graph} hospitals={hospitals} ambulances={ambulances} onReset={handleReset} simOpen={simOpen} setSimOpen={setSimOpen} />
+      <Header graph={graph} hospitals={hospitals} ambulances={ambulances} onReset={handleReset} simOpen={simOpen} setSimOpen={setSimOpen} onBell={handleBell} notifCount={logs.length} />
+      {simOpen && (
+        <div className="bg-white border-b border-[#DCE7EC] shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Scenarios onA={handleScenarioA} onB={handleScenarioB} onC={handleDemoScenario} onD={handleScenarioD} onE={handleScenarioE} onF={handleScenarioF} />
+            <RoadControl graph={graph} roadStatus={roadStatus} setRoadStatus={setRoadStatus} onApply={handleRoadUpdate} routeStats={routeStats} />
+          </div>
+        </div>
+      )}
       <div className="flex flex-1">
         <NavRail active={activeNav} onChange={setActiveNav} />
         <div className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-4 py-4">
@@ -278,7 +288,7 @@ export default function App() {
           <div className="lg:col-span-4 space-y-4">
             <HospitalDecision selectedReq={selectedReq} selection={selection} transferDecision={transferDecision} />
             <DecisionLog decisions={decisions} />
-            <EventLog logs={logs} />
+            <div id="event-log-anchor"><EventLog logs={logs} /></div>
           </div>
         </div>
           )}

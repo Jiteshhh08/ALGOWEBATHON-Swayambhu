@@ -1,6 +1,6 @@
 import { Icon, ICONS } from '../common/Icon.jsx'
 
-export function Header({ graph, hospitals, ambulances, onReset, simOpen, setSimOpen }) {
+export function Header({ graph, hospitals, ambulances, onReset, simOpen, setSimOpen, onBell, notifCount }) {
   const ambAvailable = ambulances.filter(a => a.status === 'AVAILABLE').length
   return (
     <header className="h-[60px] shrink-0 bg-white border-b border-[#DCE7EC] sticky top-0 z-20">
@@ -25,7 +25,10 @@ export function Header({ graph, hospitals, ambulances, onReset, simOpen, setSimO
             <span className="text-[11px] font-medium text-[#58707B]">{hospitals.length} hospitals · {ambAvailable} ambulances</span>
           </div>
           <button onClick={() => setSimOpen(v => !v)} className={`hidden sm:inline-flex items-center gap-1.5 px-3 h-9 rounded-[5px] text-[13px] font-semibold border ${simOpen ? 'bg-[#123B5D] text-white border-[#123B5D]' : 'bg-white text-[#285466] border-[#C7D7DE] hover:bg-[#F8FBFC]'}`}>Simulation</button>
-          <button className="w-9 h-9 rounded-[5px] border border-[#DCE7EC] bg-white flex items-center justify-center text-[#58707B] hover:bg-[#F8FBFC]"><Icon d={ICONS.bell} size={16} /></button>
+          <button onClick={onBell} className="relative w-9 h-9 rounded-[5px] border border-[#DCE7EC] bg-white flex items-center justify-center text-[#58707B] hover:bg-[#F8FBFC]">
+            <Icon d={ICONS.bell} size={16} />
+            {notifCount > 0 && <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-[#D92D3A] text-white text-[10px] font-bold rounded-full flex items-center justify-center">{notifCount > 9 ? '9+' : notifCount}</span>}
+          </button>
           <div className="w-9 h-9 rounded-full bg-[#EAF7FC] border border-[#DCE7EC] flex items-center justify-center text-xs font-bold text-[#1677A8]">JD</div>
           <button onClick={onReset} className="hidden sm:inline-flex h-9 px-3 items-center rounded-[5px] bg-[#1677A8] hover:bg-[#155A83] text-white text-[13px] font-semibold">Reset</button>
         </div>
