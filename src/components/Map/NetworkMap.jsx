@@ -209,12 +209,25 @@ export function NetworkMap({ graph, selection, selectedReq, hospitals, ambulance
             )
           })}
 
-          {/* ACTIVE ROUTE */}
+          {/* ACTIVE ROUTE — with moving ambulance simulation */}
           {routeCoords && routePath.length > 1 && (
             <>
               <polyline fill="none" stroke="white" strokeWidth={1.9*rs} strokeLinecap="round" strokeLinejoin="round" points={routeCoords} opacity={0.95} />
               <polyline fill="none" stroke="#1677A8" strokeWidth={0.85*rs} strokeLinecap="round" strokeLinejoin="round" points={routeCoords} opacity={0.98} />
               <polyline fill="none" stroke="white" strokeWidth={0.38*rs} strokeDasharray={`${0.9*rs} ${1.1*rs}`} className="route-pulse" strokeLinecap="round" points={routeCoords} opacity={0.95} />
+              {/* moving ambulance — van icon driven along path */}
+              <g>
+                <g transform={`scale(${0.95*rs}) translate(-0.78, -0.48)`}>
+                  <rect x={-0} y={-0} width={1.56} height={0.95} rx={0.18} fill="#1677A8" stroke="white" strokeWidth={0.28} />
+                  <path d="M 0.38 -0.0 L 0.78 0.34 L 0.78 0.95 L 0.38 0.95 Z" fill="white" opacity={0.96} />
+                  <rect x={0.46} y={0.24} width={0.20} height={0.28} rx={0.04} fill="#1677A8" opacity={0.9} />
+                  <g transform="translate(-0.18,0.48)"><rect x={-0.09} y={-0.22} width={0.18} height={0.44} rx={0.03} fill="white"/><rect x={-0.22} y={-0.09} width={0.44} height={0.18} rx={0.03} fill="white"/></g>
+                  <circle cx={-0.38} cy={0.99} r={0.18} fill="#16313F" stroke="white" strokeWidth={0.14}/><circle cx={0.38} cy={0.99} r={0.18} fill="#16313F" stroke="white" strokeWidth={0.14}/><circle cx={-0.38} cy={0.99} r={0.06} fill="white"/><circle cx={0.38} cy={0.99} r={0.06} fill="white"/>
+                  <circle cx={0.62} cy={-0.12} r={0.14} fill="#FDECEE" stroke="#D92D3A" strokeWidth={0.10}><animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite"/></circle>
+                </g>
+                <animateMotion path={`M ${routeCoords.split(' ').join(' L ')}`} dur={`${Math.max(1.6, Math.min(3.2, (selection?.bestDetail?.travelTime || 12)*0.14))}s`} repeatCount="indefinite" rotate="auto" calcMode="linear" />
+              </g>
+              {/* direction arrows */}
               {routePath.slice(0,-1).map((pid, i) => {
                 if (i % 2 !== 0) return null
                 const a = graph.getNode(pid)
@@ -226,6 +239,15 @@ export function NetworkMap({ graph, selection, selectedReq, hospitals, ambulance
                 const ang=Math.atan2(y2-y1, x2-x1)*180/Math.PI
                 return <g key={pid+':arrow'} transform={`translate(${mx},${my}) rotate(${ang})`}><path d="M -0.55 -0.22 L 0 0 L -0.55 0.22" fill="none" stroke="white" strokeWidth={0.22*rs} strokeLinecap="round" strokeLinejoin="round" opacity={0.95} /></g>
               })}
+              {/* start/end caps with pulse */}
+              {(() => {
+                const s=graph.getNode(routePath[0]), eN=graph.getNode(routePath[routePath.length-1]); if(!s||!eN) return null
+                const [sx,sy]=toXY(s.lat,s.lng), [ex,ey]=toXY(eN.lat,eN.lng)
+                return <>
+                  <circle cx={sx} cy={sy} r={0.9*rs} fill="white" stroke="#1677A8" strokeWidth={0.28*rs}/><circle cx={sx} cy={sy} r={0.45*rs} fill="#1677A8"/>
+                  <circle cx={ex} cy={ey} r={0.9*rs} fill="white" stroke="#238B68" strokeWidth={0.28*rs}/><circle cx={ex} cy={ey} r={0.45*rs} fill="#238B68"/>
+                </>
+              })()}
             </>
           )}
 
@@ -299,6 +321,23 @@ export function NetworkMap({ graph, selection, selectedReq, hospitals, ambulance
             </g>
           )}
         </svg>
+
+        {/* Simulation: ambulance moving banner */}
+        {selection?.selected && routePath.length > 1 && (
+          <div className="absolute bottom-0 left-0 right-0 h-[24px] bg-[#123B5D]/90 backdrop-blur flex items-center gap-2 px-3 text-[10px] font-bold tracking-wide text-white">
+            <span className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse shadow-[0_0_6px_#4ADE80]" />
+            <span>AMBULANCE {ambSelection?.selected?.id || 'AMB-??'} • EN ROUTE</span>
+            <span className="hidden sm:inline text-white/60">•</span>
+            <span className="hidden sm:inline font-normal text-[#A7DCF0] truncate">{graph.getNode(routePath[0])?.name || 'Village'} → {selection.selected.name}</span>
+            <span className="ml-auto flex items-center gap-2">
+              <span className="hidden md:inline font-normal text-white/70">ETA</span>
+              <span className="bg-white text-[#123B5D] px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">{selection.bestDetail?.travelTime?.toFixed(1) ?? '—'} min</span>
+              <span className="w-14 h-1.5 bg-white/20 rounded-full overflow-hidden hidden sm:block">
+                <span className="block h-full bg-[#4ADE80] rounded-full" style={{ animation: `shuttle ${Math.max(1.6, Math.min(3.2, (selection?.bestDetail?.travelTime || 12)*0.14))}s linear infinite`, width: '40%' }} />
+              </span>
+            </span>
+          </div>
+        )}
 
         {/* Zoom controls */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

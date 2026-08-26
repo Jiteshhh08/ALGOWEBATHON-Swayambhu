@@ -34,7 +34,7 @@ export default function App() {
     const seedRef = { seed: 777 }
     return h.flatMap(hosp => generateDoctorsForHospital(hosp, seedRef))
   })
-  const [ambulances] = useState(() => generateAmbulances([...graph.nodes.keys()], 8))
+  const [ambulances, setAmbulances] = useState(() => generateAmbulances([...graph.nodes.keys()], 8))
   const [queue] = useState(() => new EmergencyQueue())
   const [requests, setRequests] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -78,6 +78,8 @@ export default function App() {
     setSelectedId(id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
     const hospRes = decideHospital(req, hospitals, graph, { selectHospital, doctors })
+    // mark ambulance as en route for visual simulation
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     eventLog.push('EMERGENCY_CREATED', req.id, { urgency: req.urgency })
     eventLog.push('AMBULANCE_ASSIGNED', req.id, ambRes.record)
     eventLog.push('HOSPITAL_SELECTED', req.id, hospRes.record)
@@ -110,6 +112,10 @@ export default function App() {
     setRequests(r => [...r, req])
     setSelectedId(req.id)
     setForm(f => ({ ...f, originNode: origins }))
+    {
+      const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
+      if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
+    }
     setLogs(l => [{ ts: new Date().toLocaleTimeString(), type: 'DEMO', msg: `Demo: nearest lacks cardiologist, mid no ICU — far feasible wins`, tone: 'yellow' }, ...l])
   }
 
@@ -137,6 +143,7 @@ export default function App() {
     setRequests([...requests, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
     const hospRes = decideHospital(req, hospitals, graph, { selectHospital, doctors })
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     eventLog.push('EMERGENCY_CREATED', req.id, { urgency: urg })
     eventLog.push('AMBULANCE_ASSIGNED', req.id, ambRes.record)
     eventLog.push('HOSPITAL_SELECTED', req.id, hospRes.record)
@@ -151,6 +158,7 @@ export default function App() {
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
     const hospRes = decideHospital(req, hospitals, graph, { selectHospital, doctors })
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     eventLog.push('SCENARIO_A', req.id, {...ambRes.record, ...hospRes.record})
     setDecisions(d=>[hospRes.record, ambRes.record, ...d].slice(0,30))
     setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_A', msg:`A: Normal cardiac @ ${graph.getNode(origin)?.name} → ${hospRes.selected?.name || 'no hospital'}`, tone:'blue'}, ...l])
@@ -179,6 +187,7 @@ export default function App() {
     const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     const hospRes = decideHospital(req, mutatedHospitals, graph, { selectHospital, doctors: mutatedDoctors })
     if (hospRes.selected) {
       const r = decideRoute(graph, req.originNode, hospRes.selected.nodeId, 'astar')
@@ -202,6 +211,7 @@ export default function App() {
     const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     const hospRes = decideHospital(req, mutatedHospitals, graph, { selectHospital, doctors })
     const transfer = compareTransferVsDelivery(req, mutatedHospitals, graph, doctors)
     if (hospRes.selected) {
@@ -219,11 +229,12 @@ export default function App() {
       ...l])
   }
   const handleScenarioF = () => {
-    ambulances.forEach((a,i)=>{ if(i<6) a.status='EN_ROUTE' }); setHospitals(h=>[...h])
+    setAmbulances(prev => prev.map((a,i)=> i<6 ? { ...a, status:'EN_ROUTE' } : a))
     const fallbackOrigin = villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || [...graph.nodes.keys()][0]
     const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: fallbackOrigin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
     queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
     const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion:true })
+    if (ambRes.selected) setAmbulances(prev => prev.map(a => a.id === ambRes.selected.id ? { ...a, status: 'EN_ROUTE', currentRequestId: req.id } : a))
     setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_F', msg:`F: Fleet shortage — ${ambRes.reason}`, tone: ambRes.selected?'green':'red'}, ...l])
   }
   const handleCloseRandomRoad = () => {
@@ -245,6 +256,7 @@ export default function App() {
     setHospitals(newH)
     const seedRef = { seed: Math.floor(Math.random() * 1000) }
     setDoctors(newH.flatMap(h => generateDoctorsForHospital(h, seedRef)))
+    setAmbulances(generateAmbulances([...graph.nodes.keys()], 8))
     setRequests([]); setSelectedId(null); setLogs([]); setDecisions([]); eventLog.clear(); setDemoMode(false)
     for (const r of [...queue.toSorted()]) queue.remove(r.id)
   }

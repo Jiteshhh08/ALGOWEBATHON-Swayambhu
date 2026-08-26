@@ -65,3 +65,4 @@ button:active { transform: translateY(0.5px); }
 @keyframes route-move { to { stroke-dashoffset: -10; } }
 .network-pulse { background: linear-gradient(90deg, transparent, #43A9D3, transparent); animation: network-slide 2.2s ease-in-out infinite; }
 @keyframes network-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes shuttle { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }

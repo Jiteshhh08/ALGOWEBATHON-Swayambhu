@@ -40,13 +40,13 @@ export function BenchmarkPanel({ benchmark }) {
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="bg-[#FFF5E5] border border-[#FFE2B0] rounded p-2">
           <div className="font-semibold text-[#8A5A00]">Baseline <span className="font-normal text-[10px]">nearest ignores constraints</span></div>
-          <div>Avg response: <b className="font-mono">{benchmark.baseline.avgEta === '—' ? '—' : `${benchmark.baseline.avgEta}m`}</b> <span className="text-[#81949D]">({benchmark.baseline.avgQueue === '—' ? '—' : `${benchmark.baseline.avgQueue}m`} queue)</span></div>
+          <div>Avg response: <b className="font-mono">{benchmark.baseline.avgEta === '—' ? '—' : `${benchmark.baseline.avgEta} min`}</b> <span className="text-[#81949D]">({benchmark.baseline.avgQueue === '—' ? '—' : `${benchmark.baseline.avgQueue} min`} queue)</span></div>
           <div>Failed: {benchmark.baseline.failed} <span className="text-[#81949D]">({benchmark.baseline.failedPct}%)</span></div>
           <div className="text-[10px] text-[#81949D]">Route {benchmark.baseline.routingMs}ms/q</div>
         </div>
         <div className="bg-[#EAF7F2] border border-[#B9E2C8] rounded p-2">
           <div className="font-semibold text-[#1A6B4A]">Smart <span className="font-normal text-[10px]">feasible + totalCost</span></div>
-          <div>Avg response: <b className="font-mono">{benchmark.smart.avgEta === '—' ? '—' : `${benchmark.smart.avgEta}m`}</b> <span className="text-[#81949D]">({benchmark.smart.avgQueue === '—' ? '—' : `${benchmark.smart.avgQueue}m`} queue)</span></div>
+          <div>Avg response: <b className="font-mono">{benchmark.smart.avgEta === '—' ? '—' : `${benchmark.smart.avgEta} min`}</b> <span className="text-[#81949D]">({benchmark.smart.avgQueue === '—' ? '—' : `${benchmark.smart.avgQueue} min`} queue)</span></div>
           <div>Failed: {benchmark.smart.failed} <span className="text-[#81949D]">({benchmark.smart.failedPct}%)</span></div>
           <div className="text-[10px] text-[#81949D]">Route {benchmark.smart.routingMs}ms/q</div>
         </div>
