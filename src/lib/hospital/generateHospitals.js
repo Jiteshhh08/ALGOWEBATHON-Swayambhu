@@ -26,14 +26,21 @@ export function generateHospitals(graph, opts = {}) {
 
     const medicineStock = {}
     const medicineThresholds = {}
+    const medicineConsumption = {}
     for (const med of medicinePool) {
       const qty = Math.floor(rand() * 60)
       medicineStock[med] = qty
       medicineThresholds[med] = { minimum: 15, critical: 5 }
+      medicineConsumption[med] = 1 + Math.floor(rand() * 6) + (rand() < 0.2 ? 6 : 0) // 1-6, 20% high 7-12
     }
     if (rand() < 0.3) {
       const lowMed = pick(medicinePool)
       medicineStock[lowMed] = Math.floor(rand() * 4)
+    }
+    // occasionally zero consumption (stable stock) for edge case testing
+    if (rand() < 0.1) {
+      const stableMed = pick(medicinePool)
+      medicineConsumption[stableMed] = 0
     }
 
     const queueLength = Math.floor(rand() * 8)
@@ -47,14 +54,17 @@ export function generateHospitals(graph, opts = {}) {
       lng: node.lng,
       bedsTotal,
       bedsAvailable,
+      bedsOccupied: bedsTotal - bedsAvailable,
       icuTotal,
       icuAvailable,
+      icuOccupied: icuTotal - icuAvailable,
       specialties,
       equipment,
       operatingStatus,
       queueLength,
       medicineStock,
       medicineThresholds,
+      medicineConsumption,
       region: node.region,
     }
   })
@@ -73,14 +83,17 @@ export function createDemoHospitals(nodeIds) {
       lng: 74.5,
       bedsTotal: 50,
       bedsAvailable: 20,
+      bedsOccupied: 30,
       icuTotal: 8,
       icuAvailable: 3,
+      icuOccupied: 5,
       specialties: ['general', 'orthopedics'],
       equipment: ['oxygen', 'xray', 'stretcher'],
       operatingStatus: 'OPEN',
       queueLength: 1,
       medicineStock: { epinephrine: 30, insulin: 20 },
-      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 } },
+      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 }, insulin: { minimum: 15, critical: 5 } },
+      medicineConsumption: { epinephrine: 4, insulin: 3 },
       region: 'region-0',
     },
     {
@@ -91,14 +104,17 @@ export function createDemoHospitals(nodeIds) {
       lng: 74.52,
       bedsTotal: 50,
       bedsAvailable: 15,
+      bedsOccupied: 35,
       icuTotal: 6,
       icuAvailable: 0,
+      icuOccupied: 6,
       specialties: ['cardiology', 'general'],
       equipment: ['oxygen', 'ventilator', 'defibrillator'],
       operatingStatus: 'OPEN',
       queueLength: 2,
       medicineStock: { epinephrine: 25, insulin: 20 },
-      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 } },
+      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 }, insulin: { minimum: 15, critical: 5 } },
+      medicineConsumption: { epinephrine: 5, insulin: 2 },
       region: 'region-0',
     },
     {
@@ -109,14 +125,17 @@ export function createDemoHospitals(nodeIds) {
       lng: 74.56,
       bedsTotal: 60,
       bedsAvailable: 30,
+      bedsOccupied: 30,
       icuTotal: 10,
       icuAvailable: 6,
+      icuOccupied: 4,
       specialties: ['cardiology', 'trauma', 'general'],
       equipment: ['oxygen', 'ventilator', 'icu', 'defibrillator', 'xray'],
       operatingStatus: 'OPEN',
       queueLength: 0,
       medicineStock: { epinephrine: 50, insulin: 50 },
-      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 } },
+      medicineThresholds: { epinephrine: { minimum: 15, critical: 5 }, insulin: { minimum: 15, critical: 5 } },
+      medicineConsumption: { epinephrine: 3, insulin: 3 },
       region: 'region-0',
     },
   ]
