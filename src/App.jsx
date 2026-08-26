@@ -168,13 +168,55 @@ export default function App() {
   }
   const handleScenarioD = () => {
     const target = hospitals[0]; if (!target) return
-    handleToggleHospital(target.id, { bedsAvailable:0, icuAvailable:0, queueLength: target.queueLength+5 })
-    setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_D', msg:`D: Filled ${target.name} — beds 0, ICU 0`, tone:'yellow'}, ...l])
+    // Step 1: Fill Hospital A (per PRD 17 Scenario D) — make it infeasible for next request
+    const filled = { bedsAvailable: 0, icuAvailable: 0, queueLength: target.queueLength + 5, operatingStatus: 'OPEN' }
+    setHospitals(hs => hs.map(h => h.id === target.id ? { ...h, ...filled } : h))
+    invalidate()
+    // need mutated list for immediate selection
+    const mutatedHospitals = hospitals.map(h => h.id === target.id ? { ...h, ...filled } : h)
+    const mutatedDoctors = doctors // beds/ICU full is checked via hospital fields, doctors unchanged
+    const origin = villageNodes[Math.floor(Math.random()*Math.min(5, villageNodes.length))]?.id || villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || [...graph.nodes.keys()][0]
+    const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
+    queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
+    const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
+    const hospRes = decideHospital(req, mutatedHospitals, graph, { selectHospital, doctors: mutatedDoctors })
+    if (hospRes.selected) {
+      const r = decideRoute(graph, req.originNode, hospRes.selected.nodeId, 'astar')
+      eventLog.push('ROUTE_CALCULATED', req.id, r.record)
+    }
+    eventLog.push('SCENARIO_D', req.id, { filledHospital: target.id, ...hospRes.record })
+    setDecisions(d=>[hospRes.record, ambRes.record, ...d].slice(0,30))
+    const rejectedNote = hospRes.rejected?.some(r=>r.hospital.id===target.id) ? ` — ${target.name} correctly REJECTED (beds/ICU 0)` : ` — ${target.name} not in rejected (unexpected)`
+    setLogs(l=>[
+      {ts:new Date().toLocaleTimeString(), type:'SCENARIO_D', msg:`D: Filled ${target.name} — beds 0, ICU 0, queue +5${rejectedNote} → selected ${hospRes.selected?.name || 'NONE'}`, tone: hospRes.selected ? 'blue' : 'red'},
+      {ts:new Date().toLocaleTimeString(), type:hospRes.record.decisionType, msg:hospRes.record.reason + ` [${hospRes.record.algorithm}]`, tone: hospRes.selected ? 'green':'red'},
+      ...l])
   }
   const handleScenarioE = () => {
     const target = hospitals[0]; if (!target) return
-    handleToggleHospital(target.id, { medicineStock:{...target.medicineStock, epinephrine:0, insulin:0} })
-    setLogs(l=>[{ts:new Date().toLocaleTimeString(), type:'SCENARIO_E', msg:`E: Medicine stockout at ${target.name}`, tone:'yellow'}, ...l])
+    const clearedStock = { ...target.medicineStock, epinephrine: 0, insulin: 0 }
+    setHospitals(hs => hs.map(h => h.id === target.id ? { ...h, medicineStock: clearedStock } : h))
+    invalidate()
+    const mutatedHospitals = hospitals.map(h => h.id === target.id ? { ...h, medicineStock: clearedStock } : h)
+    const origin = villageNodes[Math.floor(Math.random()*Math.min(5, villageNodes.length))]?.id || villageNodes[0]?.id || [...graph.nodes.values()].find(n=>n.type==='village')?.id || [...graph.nodes.keys()][0]
+    const req = { id:`R${String(requests.length+1).padStart(3,'0')}`, originNode: origin, urgency:'Critical', requiredSpecialties:['cardiology'], requiredEquipment:['ventilator'], requiredMedicines:['epinephrine'], requiresICU:true, createdAt: Date.now(), status:'QUEUED' }
+    queue.insert(req); setRequests(r=>[...r, req]); setSelectedId(req.id)
+    const ambRes = decideAmbulance(req, ambulances, graph, { selectAmbulance, crossRegion })
+    const hospRes = decideHospital(req, mutatedHospitals, graph, { selectHospital, doctors })
+    const transfer = compareTransferVsDelivery(req, mutatedHospitals, graph, doctors)
+    if (hospRes.selected) {
+      const r = decideRoute(graph, req.originNode, hospRes.selected.nodeId, 'astar')
+      eventLog.push('ROUTE_CALCULATED', req.id, r.record)
+    }
+    eventLog.push('SCENARIO_E', req.id, { stockoutHospital: target.id, ...hospRes.record, transfer })
+    setDecisions(d=>[hospRes.record, ambRes.record, ...d].slice(0,30))
+    const medNote = hospRes.rejected?.some(r=>r.hospital.id===target.id && r.reason.includes('Medicine')) ? `${target.name} correctly REJECTED (medicine 0)` : `${target.name} stockout not rejected (unexpected)`
+    const rec = transfer.recommendation === 'DELIVER' ? `→ Deliver ${transfer.delivery.medicineId} from ${transfer.delivery.sourceHospital?.name || 'source'} ETA ${transfer.delivery.eta?.toFixed(1)}m` : `→ Transfer ETA ${transfer.transfer.eta?.toFixed(1)}m`
+    setLogs(l=>[
+      {ts:new Date().toLocaleTimeString(), type:'SCENARIO_E', msg:`E: Stockout ${target.name} epinephrine/insulin 0 — ${medNote} — ${transfer.reason} ${rec}`, tone: hospRes.selected || transfer.delivery.feasible ? 'blue' : 'red'},
+      {ts:new Date().toLocaleTimeString(), type:hospRes.record.decisionType, msg:hospRes.record.reason + ` [${hospRes.record.algorithm}]`, tone: hospRes.selected ? 'green':'red'},
+      {ts:new Date().toLocaleTimeString(), type:'TRANSFER_DECISION', msg: transfer.reason + ` [${transfer.recommendation}]`, tone: transfer.recommendation==='DELIVER' ? 'yellow':'green'},
+      ...l])
   }
   const handleScenarioF = () => {
     ambulances.forEach((a,i)=>{ if(i<6) a.status='EN_ROUTE' }); setHospitals(h=>[...h])
