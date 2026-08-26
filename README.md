@@ -6,7 +6,7 @@ Live rural healthcare command system — finds the best **feasible** ambulance +
 
 | Layer | Choice | Why |
 |---|---|---|
-| **Frontend** | **Vite + React 19 + JavaScript (JSDoc)** | Already in repo (`vite.config.js:1`, `package.json:1`). Fast HMR, JSDoc gives type safety without TS build step. |
+| **Frontend** | **Vite + React 19 + JavaScript** | Already in repo (`vite.config.js:1`, `package.json:1`). Fast HMR. |
 | **Styling** | **Tailwind CSS + shadcn/ui** | Rapid command-center UI (Queue \| Map \| Status) with accessible components. |
 | **State** | **Zustand + TanStack Query** | Zustand for simulation state (ambulances/roads), Query for server cache. Lighter than Redux. |
 | **Map** | **Leaflet + React-Leaflet** → **MapLibre + deck.gl** for scale | Leaflet = 42KB, easy for hackathon. deck.gl via WebGL for 50k nodes (avoids DOM overload). |

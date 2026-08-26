@@ -1,7 +1,3 @@
-/**
- * Generate synthetic hospital capability data aligned with PRD 7.4 / 7.9 / 7.10
- * Attach to graph nodes of type 'hospital'
- */
 export function generateHospitals(graph, opts = {}) {
   let seed = opts.seed ?? 99
   const rand = () => {
@@ -16,9 +12,9 @@ export function generateHospitals(graph, opts = {}) {
 
   const hospitalNodes = [...graph.nodes.values()].filter((n) => n.type === 'hospital')
   const hospitals = hospitalNodes.map((node, idx) => {
-    const bedsTotal = 20 + Math.floor(rand() * 80) // 20-100
+    const bedsTotal = 20 + Math.floor(rand() * 80)
     const bedsAvailable = Math.max(0, bedsTotal - Math.floor(rand() * bedsTotal * 0.9))
-    const icuTotal = 4 + Math.floor(rand() * 12) // 4-16
+    const icuTotal = 4 + Math.floor(rand() * 12)
     const icuAvailable = Math.max(0, icuTotal - Math.floor(rand() * icuTotal * 0.85))
 
     const specialtyCount = 2 + Math.floor(rand() * 3)
@@ -26,23 +22,21 @@ export function generateHospitals(graph, opts = {}) {
     const equipCount = 3 + Math.floor(rand() * 3)
     const equipment = [...new Set(Array.from({ length: equipCount }, () => pick(equipmentPool)))]
 
-    // ensure at least general is common
     if (!specialties.includes('general') && rand() > 0.3) specialties.push('general')
 
     const medicineStock = {}
     const medicineThresholds = {}
     for (const med of medicinePool) {
-      const qty = Math.floor(rand() * 60) // 0-60
+      const qty = Math.floor(rand() * 60)
       medicineStock[med] = qty
       medicineThresholds[med] = { minimum: 15, critical: 5 }
     }
-    // force some variation: make 20% hospitals low on a random med
     if (rand() < 0.3) {
       const lowMed = pick(medicinePool)
       medicineStock[lowMed] = Math.floor(rand() * 4)
     }
 
-    const queueLength = Math.floor(rand() * 8) // 0-7
+    const queueLength = Math.floor(rand() * 8)
     const operatingStatus = rand() < 0.06 ? 'CLOSED' : 'OPEN'
 
     return {
@@ -68,12 +62,7 @@ export function generateHospitals(graph, opts = {}) {
   return hospitals
 }
 
-/**
- * Helper to create a deterministic 3-hospital scenario for testing the "reject nearest" requirement
- * Nearest (H01) lacks required specialty, middle (H02) lacks ICU, farthest (H03) is feasible
- */
 export function createDemoHospitals(nodeIds) {
-  // nodeIds: [nearestNode, midNode, farNode]
   const [nA, nB, nC] = nodeIds
   return [
     {

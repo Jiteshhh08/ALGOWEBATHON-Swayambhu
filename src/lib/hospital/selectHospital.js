@@ -1,14 +1,5 @@
 import { dijkstra } from '../graph/dijkstra.js'
 
-/**
- * Hard-constraint filter + total-cost scoring for hospitals.
- * Implements PRD 7.5 / 12.2 and PHASES Phase 3.
- *
- * @param {object} request - { id, originNode, urgency, requiredSpecialties[], requiredEquipment[], requiredMedicines[], requiresICU }
- * @param {Array} hospitals - array of hospital objects
- * @param {import('../graph/graph.js').Graph} graph
- * @returns {{selected: object|null, candidates: Array, rejected: Array, reason: string}}
- */
 export function selectHospital(request, hospitals, graph) {
   const candidates = []
   const rejected = []
@@ -19,7 +10,6 @@ export function selectHospital(request, hospitals, graph) {
   const requiresICU = !!request.requiresICU
 
   for (const h of hospitals) {
-    // --- Hard constraints ---
     let failReason = null
 
     if (h.operatingStatus && h.operatingStatus !== 'OPEN') {
@@ -38,7 +28,6 @@ export function selectHospital(request, hospitals, graph) {
       if ((h.icuAvailable ?? 0) <= 0) failReason = 'ICU full — no ICU bed available'
     }
     if (!failReason) {
-      // general bed check — every admission needs a bed
       if ((h.bedsAvailable ?? 0) <= 0) failReason = 'No beds available'
     }
 
@@ -59,7 +48,6 @@ export function selectHospital(request, hospitals, graph) {
       continue
     }
 
-    // --- Travel estimation ---
     let route = null
     let travelTime = Infinity
     try {
@@ -73,9 +61,7 @@ export function selectHospital(request, hospitals, graph) {
       continue
     }
 
-    // --- Soft cost scoring ---
-    // PRD Total Cost = travel + queue + penalties
-    const queueTime = (h.queueLength || 0) * 4 // 4 min per queued patient
+    const queueTime = (h.queueLength || 0) * 4
     let bedPenalty = 0
     if (h.bedsTotal > 0) {
       const ratio = h.bedsAvailable / h.bedsTotal
@@ -109,9 +95,7 @@ export function selectHospital(request, hospitals, graph) {
       }
     }
 
-    const specialistPenalty = 0 // hard filter already passed, but keep slot for explainability
-
-    const totalCost = travelTime + queueTime + bedPenalty + icuPenalty + medicinePenalty + specialistPenalty
+    const totalCost = travelTime + queueTime + bedPenalty + icuPenalty + medicinePenalty
 
     const breakdown = {
       travel: +travelTime.toFixed(1),
@@ -136,7 +120,6 @@ export function selectHospital(request, hospitals, graph) {
     })
   }
 
-  // sort: feasible first by totalCost, then infeasible by reason
   candidates.sort((a, b) => {
     if (a.feasible && !b.feasible) return -1
     if (!a.feasible && b.feasible) return 1
@@ -159,10 +142,6 @@ export function selectHospital(request, hospitals, graph) {
   let explain = `Selected ${best.hospital.name} — lowest total cost ${best.totalCost.toFixed(1)} (travel ${best.travelTime.toFixed(1)}m)`
   if (nearestByTravel.hospital.id !== best.hospital.id) {
     explain += ` — nearest feasible ${nearestByTravel.hospital.name} (${nearestByTravel.travelTime.toFixed(1)}m) was not cheapest due to queue/penalties`
-  }
-  // find if any rejected was geographically nearest but filtered
-  if (rejected.length > 0) {
-    // we keep explain simple
   }
 
   return {
