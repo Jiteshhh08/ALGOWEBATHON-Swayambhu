@@ -281,7 +281,7 @@ export default function App() {
             <AmbulancePanel selectedReq={selectedReq} ambSelection={ambSelection} />
           </div>
           <div className="lg:col-span-5 space-y-4">
-            <NetworkMap graph={graph} selection={selection} selectedReq={selectedReq} hospitals={hospitals} />
+            <NetworkMap graph={graph} selection={selection} selectedReq={selectedReq} hospitals={hospitals} ambulances={ambulances} ambSelection={ambSelection} />
             <RoadControl graph={graph} roadStatus={roadStatus} setRoadStatus={setRoadStatus} onApply={handleRoadUpdate} routeStats={routeStats} />
             <HospitalList hospitals={hospitals} selection={selection} onToggle={handleToggleHospital} />
           </div>
@@ -300,7 +300,7 @@ export default function App() {
           )}
           {activeNav === 'facilities' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <NetworkMap graph={graph} selection={selection} selectedReq={selectedReq} hospitals={hospitals} />
+            <NetworkMap graph={graph} selection={selection} selectedReq={selectedReq} hospitals={hospitals} ambulances={ambulances} ambSelection={ambSelection} />
               <HospitalList hospitals={hospitals} selection={selection} onToggle={handleToggleHospital} />
             </div>
           )}
