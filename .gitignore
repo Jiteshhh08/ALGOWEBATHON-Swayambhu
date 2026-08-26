@@ -27,4 +27,5 @@ dist-ssr
 # Internal docs — do not publish
 PRD.md
 PHASES.md
+DESIGN.md
 scripts/
