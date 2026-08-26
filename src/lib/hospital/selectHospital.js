@@ -1,6 +1,17 @@
 import { dijkstra } from '../graph/dijkstra.js'
+import { isSpecialistAvailable } from '../resources/doctors.js'
 
-export function selectHospital(request, hospitals, graph) {
+/**
+ * Hard-constraint filter + total-cost scoring for hospitals.
+ * Implements PRD 7.5 / 12.2 and PHASES Phase 3 + Phase 5 doctor integration.
+ *
+ * @param {object} request - { id, originNode, urgency, requiredSpecialties[], requiredEquipment[], requiredMedicines[], requiresICU }
+ * @param {Array} hospitals - array of hospital objects
+ * @param {import('../graph/graph.js').Graph} graph
+ * @param {Array} doctors - optional doctors array for Phase 5 shift-aware check
+ * @returns {{selected: object|null, candidates: Array, rejected: Array, reason: string}}
+ */
+export function selectHospital(request, hospitals, graph, doctors = null) {
   const candidates = []
   const rejected = []
 
@@ -15,8 +26,18 @@ export function selectHospital(request, hospitals, graph) {
     if (h.operatingStatus && h.operatingStatus !== 'OPEN') {
       failReason = `Facility ${h.operatingStatus} — not operational`
     } else if (reqSpecs.length > 0) {
-      const missing = reqSpecs.filter((s) => !h.specialties?.includes(s))
-      if (missing.length > 0) failReason = `Missing specialist: ${missing.join(', ')}`
+      if (doctors && doctors.length) {
+        const missingDocs = reqSpecs.filter(s => !isSpecialistAvailable(doctors, h.id, s))
+        if (missingDocs.length > 0) failReason = `Specialist off-duty/unavailable: ${missingDocs.join(', ')}`
+        else {
+          // also ensure hospital lists specialty (defense in depth)
+          const missing = reqSpecs.filter((s) => !h.specialties?.includes(s))
+          if (missing.length > 0) failReason = `Missing specialist: ${missing.join(', ')}`
+        }
+      } else {
+        const missing = reqSpecs.filter((s) => !h.specialties?.includes(s))
+        if (missing.length > 0) failReason = `Missing specialist: ${missing.join(', ')}`
+      }
     }
 
     if (!failReason && reqEq.length > 0) {
