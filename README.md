@@ -55,5 +55,3 @@ Env: `VITE_API_URL`, `VITE_WS_URL` in `.env` (` `.gitignore:25`).
 - **Dynamic** – `ROAD_CLOSED` invalidates routes → A* recalculates, new ETA pushed.
 - **No hardcoding, no fabricated metrics** – UI uses actual engine; timings from `performance.now()`.
 - **Scale** – adjacency-list + viewport culling; never render 50k nodes as DOM.
-
-*JS-only, no TypeScript.*
